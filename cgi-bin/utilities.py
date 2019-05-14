@@ -5,6 +5,27 @@ from inspect import currentframe, getfile
 from os import path
 
 import pandas as pd
+from mysql import connector
+
+databases = {
+    'orders': 'WebShop_Orders',
+    'products': 'WebShop_Products',
+    'customers': 'WebShop_Customer',
+    'addresses': 'WebShop_Address'
+}
+
+config = {
+    'user': 'Edwin',
+    'password': 'Edwin98',
+    'host': 'localhost',
+    'database': 'edca17',
+    'port': '8889',
+    'raise_on_warnings': True,
+    'use_unicode': True,
+}
+
+connection = connector.connect(**config)
+cursor = connection.cursor(dictionary=True)
 
 cmd_folder = path.realpath(
     path.abspath(path.split(getfile(currentframe()))[0])) + '/'
@@ -37,14 +58,23 @@ def get_products_filtered(categories=None):
     {'id': 443, 'brand': 'Cheap Monday', 'type': 'Pants, 'subtype': 'Jeans',
      'color': 'Black', 'gender': 'Male', 'price': 449, 'size': 'S'}]
     """
+    input_is_not_none: bool = categories is not None
 
-    df = pd.read_csv(cmd_folder + 'data/Products.csv')
-    if categories is not None:
-        for category in categories.keys():
-            df = df[df[category] == categories[category]]
-    ''' SQL '''
+    if input_is_not_none:
+        if categories['type'] is None or categories['subtype'] is None or categories['gender'] is None:
+            raise RuntimeError('You need to specify the filtering dictionary.')
 
-    return df.to_dict('records')
+        ps = 'select * from edca17.WebShop_Products where type = %s AND subtype = %s AND gender = %s'
+        cursor.execute(ps, (categories['type'], categories['subtype'], categories['gender']))
+        result = cursor.fetchall()
+    else:
+        cursor.execute('select * from edca17.WebShop_Products;')
+        result = cursor.fetchall()
+
+    if len(result) > 0:
+        return result
+    else:
+        return None
 
 
 def get_products_search(values):
@@ -271,27 +301,14 @@ def get_20_most_popular():
 
 
 def main():
-    # test = get_products_filtered({'type': 'Bags', 'subtype': 'Leather bag'})
+    test1 = get_products_filtered({'type': 'Shirts', 'subtype': 'T-shirt', 'gender': 'Female'})
+    test2 = get_products_filtered(None)
+
     # test = get_products_ids([1,2,3])
     # test = get_categories()
     # test = get_subcategories('Female', 'Bags')
     # test = get_20_most_popular()
-    test = write_order({
-        'town':
-            'asad',
-        'name':
-            'öäåasd asd',
-        'items':
-            '[2160,2160,2160,2160,2160,2160,2160,2160,2160]',
-        'zipcode':
-            '123123',
-        'address':
-            'asd',
-        'email':
-            'asd'
-    })
     # test = get_products_search(['jack', 'and', 'jones'])
-    print(test)
 
 
 if __name__ == '__main__':

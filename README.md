@@ -1,6 +1,8 @@
 Projektuppgift
 --------------
 
+<p>Servera denna server med <code>python3 -m http.server 8000 --bind 127.0.0.1 --cgi</code>.</p>
+
 Webshopen BestBuy (ingen sammankoppling till butiken med samma namn i U.S.A finns) är en försäljare för kläder. De har hitintills haft ett fungerande system där de använt sig av kommaseparerade (csv) filer för att hantera produkter, kunder, och ordrar. I dagsläget fungerar det, men de vill säkra sig för framtiden genom att uppgradera till en databas istället för detta filbaserade system.
 
 På [http://www.student.bth.se/~frer01/databas/](http://www.student.bth.se/~frer01/databas/) återfinner ni nuvarande implementation, där ni kan se hur allting fungerar och testa göra ordrar och så vidare. Källkoden kan ni ladda ner från [git.cse.bth.se/courses/database-project](https://git.cse.bth.se/courses/database-project/tree/master) och spara i er **www** katalog på er studentserver (antingen via [FileZilla](https://dbwebb.se/kunskap/flytta-filer-till-driftsmiljon-med-sftp-och-filezilla), eller J: via [VPN](https://studentportal.bth.se/page/lagra-dokument-och-filer)). När ni laddat upp filerna www katalogen i er student-katalog (J:) kommer ni åt er webshop via [http://www.student.bth.se/~<er_akronym>/](http://www.student.bth.se/~<er_akronym>/), för att testa vidare själva och förstå hur koden fungerar (börja med att ladda upp alla filer från gitlab och se att det fungerar innan ni börjar ändra).
