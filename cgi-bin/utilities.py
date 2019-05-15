@@ -58,7 +58,7 @@ def get_products_filtered(categories=None):
     {'id': 443, 'brand': 'Cheap Monday', 'type': 'Pants, 'subtype': 'Jeans',
      'color': 'Black', 'gender': 'Male', 'price': 449, 'size': 'S'}]
     """
-    input_is_not_none: bool = categories is not None
+    input_is_not_none = categories is not None
 
     if input_is_not_none:
         if categories['type'] is None or categories['subtype'] is None or categories['gender'] is None:
@@ -105,13 +105,17 @@ def get_products_search(values):
     ]
     """
 
-    # TODO: joel!
+    # TODO: joel! FIXA
 
-    df = pd.read_csv(cmd_folder + 'data/Products.csv')
-    df = df[df['brand'].str.contains('(?i)' + '|'.join(values))]
-    ''' SQL '''
+    ps = 'SELECT * FROM WebShop_Products'
+    cursor.execute(ps)
+    result = cursor.fetchall()
 
-    return df.to_dict('records')
+    return result
+
+
+def filter_dict(d1: dict, d2: dict):
+    return [x for x in d1 if not d2.items() - x.items()]
 
 
 def get_products_ids(ids):
@@ -294,20 +298,20 @@ def get_20_most_popular():
      'size': 'S'}]
     """
 
-    df = pd.read_csv(cmd_folder + 'data/Orders.csv')
-    top20_ids = df.groupby(['id']).sum().loc[:, ['amount']].sort_values(
-        'amount', ascending=False).iloc[:20].index.tolist()
-    df = pd.read_csv(cmd_folder + 'data/Products.csv')
+    ps = 'SELECT * FROM best20Sellers limit 20'
+    cursor.execute(ps)
+    res = cursor.fetchall()
 
-    return df.iloc[top20_ids, :].to_dict('records')
+    for row in res:
+        print(row)
+
+    return res
 
 
 def main():
-    test1 = get_products_filtered({'type': 'Shirts', 'subtype': 'T-shirt', 'gender': 'Female'})
-    test2 = get_products_filtered(None)
-
-    for row in test1:
-        print(row)
+    # test1 = get_products_filtered({'type': 'Shirts', 'subtype': 'T-shirt', 'gender': 'Female'})
+    # test2 = get_products_filtered(None)
+    test4 = get_20_most_popular()
 
     # test = get_products_ids([1,2,3])
     # test = get_categories()
