@@ -105,6 +105,8 @@ def get_products_search(values):
     ]
     """
 
+    # TODO: joel!
+
     df = pd.read_csv(cmd_folder + 'data/Products.csv')
     df = df[df['brand'].str.contains('(?i)' + '|'.join(values))]
     ''' SQL '''
