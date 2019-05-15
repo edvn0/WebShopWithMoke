@@ -15,11 +15,11 @@ databases = {
 }
 
 config = {
-    'user': 'Edwin',
-    'password': 'Edwin98',
-    'host': 'localhost',
+    'user': 'edca17',
+    'password': 'uopdJPDnSiav',
+    'host': 'blu-ray.student.bth.se',
     'database': 'edca17',
-    'port': '8889',
+    'port': '3306',
     'raise_on_warnings': True,
     'use_unicode': True,
 }
@@ -64,11 +64,11 @@ def get_products_filtered(categories=None):
         if categories['type'] is None or categories['subtype'] is None or categories['gender'] is None:
             raise RuntimeError('You need to specify the filtering dictionary.')
 
-        ps = 'select * from edca17.WebShop_Products where type = %s AND subtype = %s AND gender = %s'
+        ps = 'select * from WebShop_Products where type = %s AND subtype = %s AND gender = %s'
         cursor.execute(ps, (categories['type'], categories['subtype'], categories['gender']))
         result = cursor.fetchall()
     else:
-        cursor.execute('select * from edca17.WebShop_Products;')
+        cursor.execute('select * from WebShop_Products;')
         result = cursor.fetchall()
 
     if len(result) > 0:
@@ -303,6 +303,9 @@ def get_20_most_popular():
 def main():
     test1 = get_products_filtered({'type': 'Shirts', 'subtype': 'T-shirt', 'gender': 'Female'})
     test2 = get_products_filtered(None)
+
+    for row in test1:
+        print(row)
 
     # test = get_products_ids([1,2,3])
     # test = get_categories()
