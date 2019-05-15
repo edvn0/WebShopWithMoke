@@ -24,6 +24,9 @@ config = {
     'use_unicode': True,
 }
 
+headers = ['brand', 'origin', 'type', 'subtype', 'color', 'gender', 'price', 'size', 'product_name', 'category',
+           'weight', 'article_identifier']
+
 connection = connector.connect(**config)
 cursor = connection.cursor(dictionary=True)
 
@@ -111,11 +114,15 @@ def get_products_search(values):
     cursor.execute(ps)
     result = cursor.fetchall()
 
-    return result
+    end_res = []
+    for row in result:
+        for header in headers:
+            row_brand = str(row[header]).split(" ")
+            is_in_values = [x for x in row_brand if x in values]
+            if len(is_in_values) > 0:
+                end_res.append(row)
 
-
-def filter_dict(d1: dict, d2: dict):
-    return [x for x in d1 if not d2.items() - x.items()]
+    return end_res
 
 
 def get_products_ids(ids):
@@ -144,11 +151,13 @@ def get_products_ids(ids):
      'color': 'Black', 'gender': 'Male', 'price': 449, 'size': 'S'}]
     """
 
-    df = pd.read_csv(cmd_folder + 'data/Products.csv')
-    df = df.loc[df['id'].isin(ids)]
-    ''' SQL '''
+    ps = 'SELECT * FROM WebShop_Products'
+    cursor.execute(ps)
+    result = cursor.fetchall()
 
-    return df.to_dict('records')
+    result = [x for x in result if x['id'] in ids]
+
+    return result
 
 
 def get_categories():
@@ -302,18 +311,21 @@ def get_20_most_popular():
     cursor.execute(ps)
     res = cursor.fetchall()
 
-    for row in res:
-        print(row)
-
     return res
 
 
 def main():
     # test1 = get_products_filtered({'type': 'Shirts', 'subtype': 'T-shirt', 'gender': 'Female'})
     # test2 = get_products_filtered(None)
-    test4 = get_20_most_popular()
+    # test3 = get_products_search() FUNKAR EJ
+    # test4 = get_20_most_popular()
 
-    # test = get_products_ids([1,2,3])
+    test3 = get_products_search(['1564', '1879'])
+
+    for row in test3:
+        print(row)
+
+    # test = get_products_ids([14000, 51200, 1100, 1, 1000, 1000, 1, 2])
     # test = get_categories()
     # test = get_subcategories('Female', 'Bags')
     # test = get_20_most_popular()
