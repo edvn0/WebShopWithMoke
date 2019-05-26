@@ -24,11 +24,23 @@ config = {
     'use_unicode': True,
 }
 
+configHome = {
+    'user': 'Edwin',
+    'password': 'Edwin98',
+    'host': 'localhost',
+    'database': 'database-bth',
+    'port': '8889',
+    'raise_on_warnings': True,
+    'use_unicode': True,
+}
+
 headers = ['brand', 'origin', 'type', 'subtype', 'color', 'gender', 'price', 'size', 'product_name', 'category',
            'weight', 'article_identifier']
 
-connection = connector.connect(**config)
+connection = connector.connect(**configHome)
 cursor = connection.cursor(dictionary=True)
+cursor.execute('SELECT * FROM WebShop_Products')
+pre_pros_result = cursor.fetchall()
 
 cmd_folder = path.realpath(
     path.abspath(path.split(getfile(currentframe()))[0])) + '/'
@@ -71,8 +83,7 @@ def get_products_filtered(categories=None):
         cursor.execute(ps, (categories['type'], categories['subtype'], categories['gender']))
         result = cursor.fetchall()
     else:
-        cursor.execute('select * from WebShop_Products;')
-        result = cursor.fetchall()
+        result = pre_pros_result
 
     if len(result) > 0:
         return result
@@ -108,19 +119,39 @@ def get_products_search(values):
     ]
     """
 
-    # TODO: joel! FIXA
+    # end_res = {key: val for key, val in pre_pros_result.items() if val in values}
 
-    ps = 'SELECT * FROM WebShop_Products'
-    cursor.execute(ps)
-    result = cursor.fetchall()
+    # res = {key: val for el in pre_pros_result for key, val in pre_pros_result.items()}
+    # print(res)
+    # end_res = {}
+
+    new_values = {}
+    for i in range(len(values)):
+        new_values[i] = values[i]
+
+    # end_res = []
+    # for row in pre_pros_result:
+    #    for header in headers:
+    #        row_brand = str(row[header]).split(" ")
+    #        is_in_values = [x for x in row_brand if x in values]
+    #        if len(is_in_values) > 0:
+    #            end_res.append(row)
 
     end_res = []
-    for row in result:
-        for header in headers:
-            row_brand = str(row[header]).split(" ")
-            is_in_values = [x for x in row_brand if x in values]
-            if len(is_in_values) > 0:
-                end_res.append(row)
+    for row in pre_pros_result:
+        brand_in_row = str(row['brand']).lower()
+        brand_in_values = ' '.join(values)
+
+        if brand_in_row == brand_in_values:
+            end_res.append(row)
+
+    #  for row in pre_pros_result:
+    #     print(row['id'])
+    #    for value in new_values:
+    #       if any(row[header] is value for header in headers):
+    #          pass
+    #     else:
+    #        end_res.append(row)
 
     return end_res
 
@@ -150,12 +181,13 @@ def get_products_ids(ids):
     {'id': 443, 'brand': 'Cheap Monday', 'type': 'Pants, 'subtype': 'Jeans',
      'color': 'Black', 'gender': 'Male', 'price': 449, 'size': 'S'}]
     """
-
-    ps = 'SELECT * FROM WebShop_Products'
-    cursor.execute(ps)
-    result = cursor.fetchall()
-
-    result = [x for x in result if x['id'] in ids]
+    result = []
+    for item_id in ids:
+        sql_order = 'select id, brand, type, subtype, color, gender, price, size ' \
+                    ' from WebShop_Products where id = ' + str(item_id) + ';'
+        cursor.execute(sql_order)
+        row = cursor.fetchall()
+        result.append(row)
 
     return result
 
@@ -177,19 +209,28 @@ def get_categories():
                                    {'url': '', 'name': 'Väskor'}]}]
     """
 
-    df = pd.read_csv(cmd_folder + 'data/Products.csv')
+    df = pd.DataFrame.from_dict(pre_pros_result)
+
     genders = df['gender'].unique()
     types = [
         df[(df['gender'] == genders[0])]['type'].unique().tolist(),
-        df[(df['gender'] == genders[1])]['type'].unique().tolist()
+        df[(df['gender'] == genders[1])]['type'].unique().tolist(),
     ]
-    children = [[{
-        'url': '',
-        'name': name
-    } for name in types[0]], [{
-        'url': '',
-        'name': name
-    } for name in types[1]]]
+
+    children = \
+        [
+            [
+                {
+                    'url': '',
+                    'name': name
+                } for name in types[0]],
+            [
+                {
+                    'url': '',
+                    'name': name
+                } for name in types[1]
+            ]
+        ]
     ''' SQL '''
 
     result = [{
@@ -223,7 +264,8 @@ def get_subcategories(gender, category):
         [{'url': '', 'name': 'T-shirts'}, {'url': '', 'name': 'Linnen'}]}]
     """
 
-    df = pd.read_csv(cmd_folder + 'data/Products.csv')
+    df = pd.DataFrame.from_dict(pre_pros_result)
+
     types = df[(df['gender'] == gender)
                & (df['type'] == category)]['subtype'].unique().tolist()
     children = [{'url': '', 'name': name} for name in types]
@@ -231,6 +273,39 @@ def get_subcategories(gender, category):
     ''' SQL '''
 
     return result
+
+
+def write_order_sql(order):
+    """
+    Indata
+    order som är en dictionary med nycklarna och dess motsvarande värden:
+    town: Kundens stad
+    name: Kundens namn
+    zipcode: Kundens postkod
+    address: Kundens address
+    email: Kundens email
+    items: En lista av heltal som representerar alla produkters artikelnummer.
+        Så många gånger ett heltal finns i listan, så många artiklar av den
+        typen har kunden köpt. Exempelvis: [1,2,2,3]. I den listan har kunden
+        köpt 1 styck av produkt 1, 2 styck av produkt 2, och 1 styck av
+        produkt 3.
+    """
+    sql_order = 'select * from salesforcustomer where concat(first_name,\' \',last_name) = %s or first_name = %s'
+    print(sql_order)
+
+    cursor.execute(sql_order, (get_name(order['name']), get_name(order['name'])))
+    final_res = cursor.fetchall()
+    print()
+
+    try:
+        firstname, lastname = order['name'].split()
+    except Exception:
+        firstname = order['name']
+        lastname = ''
+    email = order['email']
+    address = order['address']
+    zipcode = order['zipcode']
+    town = order['town']
 
 
 def write_order(order):
@@ -248,10 +323,10 @@ def write_order(order):
         köpt 1 styck av produkt 1, 2 styck av produkt 2, och 1 styck av
         produkt 3.
     """
-
     df_orders = pd.read_csv(cmd_folder + 'data/Orders.csv')
     # Get new order ID
     orderID = df_orders['orderid'].max() + 1
+    print(orderID)
     # Grab the products id number and the amount of each product
     item_ids = list(map(int, order['items'].strip('[]').split(',')))
     items = [{
@@ -282,6 +357,10 @@ def write_order(order):
             product['price'], product['size'], item['amount']
         ]
     df_orders.to_csv('data/Orders.csv', index=False, encoding='utf-8')
+
+
+def get_name(name):
+    return '\'' + str(name) + '\''
 
 
 def get_20_most_popular():
@@ -320,16 +399,15 @@ def main():
     # test3 = get_products_search() FUNKAR EJ
     # test4 = get_20_most_popular()
 
-    test3 = get_products_search(['1564', '1879'])
+    write_order_sql({'email': 'edca17@student.bth.se', 'name': 'Martino Baldcock', 'address': 'Utridarevägen 5A',
+                     'zipcode': '37140', 'town': 'Karlskrona', 'items': '[777]'})
 
-    for row in test3:
-        print(row)
-
-    # test = get_products_ids([14000, 51200, 1100, 1, 1000, 1000, 1, 2])
-    # test = get_categories()
-    # test = get_subcategories('Female', 'Bags')
-    # test = get_20_most_popular()
+    # test = get_subcategories('Male', 'Jackets')
     # test = get_products_search(['jack', 'and', 'jones'])
+    # test = get_products_search(['wesc'])
+
+    # test = get_categories()
+    # test = get_20_most_popular()
 
 
 if __name__ == '__main__':
