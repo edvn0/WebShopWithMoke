@@ -34,9 +34,6 @@ configHome = {
     'use_unicode': True,
 }
 
-headers = ['brand', 'origin', 'type', 'subtype', 'color', 'gender', 'price', 'size', 'product_name', 'category',
-           'weight', 'article_identifier']
-
 connection = connector.connect(**configHome)
 cursor = connection.cursor(dictionary=True)
 
@@ -274,17 +271,8 @@ def insert_customer(first_name, last_name, email, address_id):
                     ' VALUES (%s, %s, %s, %s, %s, %s, %s)'
         cursor.execute(sql_order, (address_id, first_name, last_name, None, None, None, email))
         connection.commit()
-        res = get_customer(first_name, last_name, email, address_id)
-        return res
+        return insert_customer(first_name, last_name, email, address_id)
         # insert a new customer
-
-
-def get_customer(first_name, last_name, email, address_id):
-    sql_check = 'select * from WebShop_Customer where first_name = %s and last_name = %s and email = %s and address_id = %s'
-    cursor.execute(sql_check, (first_name, last_name, email, address_id))
-    res = cursor.fetchall()
-
-    return res[0]
 
 
 def insert_address(address, zipcode, town):
@@ -298,16 +286,7 @@ def insert_address(address, zipcode, town):
         sql_order = 'insert into WebShop_Address (first_line, second_line, third_line) VALUES (%s, %s, %s)'
         cursor.execute(sql_order, (address, zipcode, town))
         connection.commit()
-        res = get_address(address, zipcode, town)
-        return res
-
-
-def get_address(address, zipcode, town):
-    sql_check = 'select * from WebShop_Address where first_line = %s and second_line = %s and third_line = %s'
-    cursor.execute(sql_check, (address, zipcode, town))
-    res = cursor.fetchall()
-
-    return res[0]
+        return insert_address(address, zipcode, town)
 
 
 def write_order_sql(order):
@@ -357,60 +336,11 @@ def write_order_sql(order):
         connection.commit()
 
 
-def write_order(order):
-    """
-    Indata
-    order som är en dictionary med nycklarna och dess motsvarande värden:
-    town: Kundens stad
-    name: Kundens namn
-    zipcode: Kundens postkod
-    address: Kundens address
-    email: Kundens email
-    items: En lista av heltal som representerar alla produkters artikelnummer.
-        Så många gånger ett heltal finns i listan, så många artiklar av den
-        typen har kunden köpt. Exempelvis: [1,2,2,3]. I den listan har kunden
-        köpt 1 styck av produkt 1, 2 styck av produkt 2, och 1 styck av
-        produkt 3.
-    """
-    df_orders = pd.read_csv(cmd_folder + 'data/Orders.csv')
-    # Get new order ID
-    orderID = df_orders['orderid'].max() + 1
-
-    # Grab the products id number and the amount of each product
-    item_ids = list(map(int, order['items'].strip('[]').split(',')))
-    items = [
-        {
-            'id': int(x),
-            'amount': item_ids.count(x)
-        } for x in list(set(item_ids))
-    ]
-
-    # Get the name and so on for the customer.
-    try:
-        firstname, lastname = order['name'].split()
-    except Exception:
-        firstname = order['name']
-        lastname = ''
-    email = order['email']
-    address = order['address']
-    zipcode = order['zipcode']
-    town = order['town']
-
-    # Write the actual order
-    df_products = pd.read_csv(cmd_folder + 'data/Products.csv')
-    for item in items:
-        product = df_products[df_products['id'] == item['id']].to_dict(
-            'records')[0]
-        df_orders.loc[len(df_orders)] = [
-            orderID, firstname, lastname, address, town, zipcode,
-            product['id'], product['brand'], product['type'],
-            product['subtype'], product['color'], product['gender'],
-            product['price'], product['size'], item['amount']
-        ]
-    df_orders.to_csv('data/Orders.csv', index=False, encoding='utf-8')
-
-
 def get_name(name):
+    """ Helper function to return a sql-queryable string...
+    :param name: whatever string parseable type
+    :return: 'name'.
+    """
     return '\'' + str(name) + '\''
 
 

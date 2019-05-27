@@ -13,7 +13,7 @@ from jinja2 import Environment, FileSystemLoader
 # Import our utilitiy functions
 from utilities import (get_20_most_popular, get_categories,
                        get_products_filtered, get_products_ids,
-                       get_products_search, get_subcategories, write_order, write_order_sql)
+                       get_products_search, get_subcategories, write_order_sql)
 
 sys.stdout = getwriter("utf-8")(sys.stdout.detach())
 cgitb.enable()  # Enable debugging
