@@ -13,7 +13,7 @@ from jinja2 import Environment, FileSystemLoader
 # Import our utilitiy functions
 from utilities import (get_20_most_popular, get_categories,
                        get_products_filtered, get_products_ids,
-                       get_products_search, get_subcategories, write_order)
+                       get_products_search, get_subcategories, write_order, write_order_sql)
 
 sys.stdout = getwriter("utf-8")(sys.stdout.detach())
 cgitb.enable()  # Enable debugging
@@ -98,21 +98,27 @@ def cart():
                     for cookie in environ['HTTP_COOKIE'].split('; ')
                 ]
             }.get('cart')
-            if cart_data:
-                value = map(int, cart_data.strip("[]").split("%2C"))
-                cart = get_products_ids(value)
+            if cart_data.strip('[]').split('%2C') != [""]:
+                if cart_data:
+                    values = [int(x) for x in cart_data.strip('[]').split('%2C')]
+                    cart = get_products_ids(values)
+            else:
+                values = []
+                cart = get_products_ids(values)
         template = env.get_template('cart.html')
+        total = 0
+        if cart is not None:
+            for product in cart:
+                total += product['price']
+
         print(template.render(
             title='BestBuy (cart)',
-            cart=cart,
-            price=23,
+            cart=[item for item in cart],
+            price=total,
         ))
-        """print(template.render(title='BestBuy (cart)', cart=[
-            {'brand': 'brand', 'name': 'Name', 'size': 'XXXL', 'price': 2323, 'color': "red"},
-            {'brand': 'brand', 'name': 'Name', 'size': 'XL', 'price': 2323, 'color': "red"},
-        ]))"""
+       # print(template.render(title='BestBuy (cart)', cart=[item for item in cart]))
     except Exception as e:
-        print(e)
+        print("This is the error:\n", e)
 
 
 def checkout():
@@ -125,7 +131,7 @@ def checkout():
             'town': form.getvalue('town'),
             'items': form.getvalue('items')
         }
-        write_order(order)
+        write_order_sql(order)
 
         template = env.get_template('checkout.html')
         print(

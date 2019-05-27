@@ -39,8 +39,6 @@ headers = ['brand', 'origin', 'type', 'subtype', 'color', 'gender', 'price', 'si
 
 connection = connector.connect(**configHome)
 cursor = connection.cursor(dictionary=True)
-cursor.execute('SELECT * FROM WebShop_Products')
-pre_pros_result = cursor.fetchall()
 
 cmd_folder = path.realpath(
     path.abspath(path.split(getfile(currentframe()))[0])) + '/'
@@ -79,11 +77,15 @@ def get_products_filtered(categories=None):
         if categories['type'] is None or categories['subtype'] is None or categories['gender'] is None:
             raise RuntimeError('You need to specify the filtering dictionary.')
 
-        ps = 'select * from WebShop_Products where type = %s AND subtype = %s AND gender = %s'
+        ps = 'select *, product_name as name from WebShop_Products where type = %s AND subtype = %s AND gender = %s'
         cursor.execute(ps, (categories['type'], categories['subtype'], categories['gender']))
         result = cursor.fetchall()
+
     else:
-        result = pre_pros_result
+        select = 'select * from WebShop_Products'
+        cursor.execute(select)
+        res = cursor.fetchall()
+        result = res
 
     if len(result) > 0:
         return result
@@ -118,40 +120,16 @@ def get_products_search(values):
      'color': 'Black', 'gender': 'Male', 'price': 449, 'size': 'S'},
     ]
     """
-
-    # end_res = {key: val for key, val in pre_pros_result.items() if val in values}
-
-    # res = {key: val for el in pre_pros_result for key, val in pre_pros_result.items()}
-    # print(res)
-    # end_res = {}
-
-    new_values = {}
-    for i in range(len(values)):
-        new_values[i] = values[i]
-
-    # end_res = []
-    # for row in pre_pros_result:
-    #    for header in headers:
-    #        row_brand = str(row[header]).split(" ")
-    #        is_in_values = [x for x in row_brand if x in values]
-    #        if len(is_in_values) > 0:
-    #            end_res.append(row)
+    cursor.execute('select * from WebShop_Products')
+    pre_pros_result = cursor.fetchall()
 
     end_res = []
     for row in pre_pros_result:
         brand_in_row = str(row['brand']).lower()
-        brand_in_values = ' '.join(values)
+        brand_in_values = ' '.join(values).lower()
 
         if brand_in_row == brand_in_values:
             end_res.append(row)
-
-    #  for row in pre_pros_result:
-    #     print(row['id'])
-    #    for value in new_values:
-    #       if any(row[header] is value for header in headers):
-    #          pass
-    #     else:
-    #        end_res.append(row)
 
     return end_res
 
@@ -181,13 +159,17 @@ def get_products_ids(ids):
     {'id': 443, 'brand': 'Cheap Monday', 'type': 'Pants, 'subtype': 'Jeans',
      'color': 'Black', 'gender': 'Male', 'price': 449, 'size': 'S'}]
     """
+
+    # Make the ids unique...
+    ids = list(set(ids))
+
     result = []
     for item_id in ids:
-        sql_order = 'select id, brand, type, subtype, color, gender, price, size ' \
-                    ' from WebShop_Products where id = ' + str(item_id) + ';'
+        sql_order = 'select id, brand, type, subtype, color, gender, price, size, product_name as name from WebShop_Products where id = ' + get_name(
+            item_id)
         cursor.execute(sql_order)
         row = cursor.fetchall()
-        result.append(row)
+        result.append(row[0])
 
     return result
 
@@ -209,6 +191,9 @@ def get_categories():
                                    {'url': '', 'name': 'Väskor'}]}]
     """
 
+    # cast dict to data frame to sustain current system.
+    cursor.execute('select * from WebShop_Products')
+    pre_pros_result = cursor.fetchall()
     df = pd.DataFrame.from_dict(pre_pros_result)
 
     genders = df['gender'].unique()
@@ -231,7 +216,6 @@ def get_categories():
                 } for name in types[1]
             ]
         ]
-    ''' SQL '''
 
     result = [{
         'title': genders[0],
@@ -264,15 +248,66 @@ def get_subcategories(gender, category):
         [{'url': '', 'name': 'T-shirts'}, {'url': '', 'name': 'Linnen'}]}]
     """
 
+    # cast dict to data frame to sustain current system.
+    cursor.execute('select * from WebShop_Products')
+    pre_pros_result = cursor.fetchall()
     df = pd.DataFrame.from_dict(pre_pros_result)
 
     types = df[(df['gender'] == gender)
                & (df['type'] == category)]['subtype'].unique().tolist()
     children = [{'url': '', 'name': name} for name in types]
     result = [{'gender': gender, 'category': category, 'children': children}]
-    ''' SQL '''
 
     return result
+
+
+def insert_customer(first_name, last_name, email, address_id):
+    sql_check = 'select * from WebShop_Customer where first_name = %s and last_name = %s'
+    cursor.execute(sql_check, (first_name, last_name))
+    res = cursor.fetchall()
+
+    if len(res) == 1:
+        return res[0]
+    else:
+        sql_order = 'insert into WebShop_Customer' \
+                    ' (address_id, first_name, last_name, identifier, gender, mobile, email)' \
+                    ' VALUES (%s, %s, %s, %s, %s, %s, %s)'
+        cursor.execute(sql_order, (address_id, first_name, last_name, None, None, None, email))
+        connection.commit()
+        res = get_customer(first_name, last_name, email, address_id)
+        return res
+        # insert a new customer
+
+
+def get_customer(first_name, last_name, email, address_id):
+    sql_check = 'select * from WebShop_Customer where first_name = %s and last_name = %s and email = %s and address_id = %s'
+    cursor.execute(sql_check, (first_name, last_name, email, address_id))
+    res = cursor.fetchall()
+
+    return res[0]
+
+
+def insert_address(address, zipcode, town):
+    sql_check = 'select * from WebShop_Address where first_line = %s and second_line = %s and third_line = %s'
+    cursor.execute(sql_check, (address, zipcode, town))
+    res = cursor.fetchall()
+
+    if len(res) == 1:
+        return res[0]
+    else:
+        sql_order = 'insert into WebShop_Address (first_line, second_line, third_line) VALUES (%s, %s, %s)'
+        cursor.execute(sql_order, (address, zipcode, town))
+        connection.commit()
+        res = get_address(address, zipcode, town)
+        return res
+
+
+def get_address(address, zipcode, town):
+    sql_check = 'select * from WebShop_Address where first_line = %s and second_line = %s and third_line = %s'
+    cursor.execute(sql_check, (address, zipcode, town))
+    res = cursor.fetchall()
+
+    return res[0]
 
 
 def write_order_sql(order):
@@ -290,13 +325,6 @@ def write_order_sql(order):
         köpt 1 styck av produkt 1, 2 styck av produkt 2, och 1 styck av
         produkt 3.
     """
-    sql_order = 'select * from salesforcustomer where concat(first_name,\' \',last_name) = %s or first_name = %s'
-    print(sql_order)
-
-    cursor.execute(sql_order, (get_name(order['name']), get_name(order['name'])))
-    final_res = cursor.fetchall()
-    print()
-
     try:
         firstname, lastname = order['name'].split()
     except Exception:
@@ -306,6 +334,27 @@ def write_order_sql(order):
     address = order['address']
     zipcode = order['zipcode']
     town = order['town']
+
+    item_ids = list(map(int, order['items'].strip('[]').split(',')))
+    items = [
+        {
+            'id': int(x),
+            'amount': item_ids.count(x)
+        } for x in list(set(item_ids))
+    ]
+
+    # Grab or generate ids for customer and address, grab if they exist in our db,
+    # else generate via inserting both address and customer.
+    customer_address = insert_address(address, zipcode, town)
+    customer = insert_customer(firstname, lastname, email, customer_address['address_id'])
+    for item in items:
+        # Add an order for each product purchased, i.e. if you bought 5 shirts, this will add 5 order inserts.
+        for _ in range(item['amount']):
+            sql_write_order = 'insert into WebShop_Orders (customer_id, product_id, date_time) VALUES (%s,%s, now());'
+            cursor.execute(sql_write_order, (customer['customer_id'], item['id']))
+
+        # always commit in when changing a db...
+        connection.commit()
 
 
 def write_order(order):
@@ -326,13 +375,15 @@ def write_order(order):
     df_orders = pd.read_csv(cmd_folder + 'data/Orders.csv')
     # Get new order ID
     orderID = df_orders['orderid'].max() + 1
-    print(orderID)
+
     # Grab the products id number and the amount of each product
     item_ids = list(map(int, order['items'].strip('[]').split(',')))
-    items = [{
-        'id': int(x),
-        'amount': item_ids.count(x)
-    } for x in list(set(item_ids))]
+    items = [
+        {
+            'id': int(x),
+            'amount': item_ids.count(x)
+        } for x in list(set(item_ids))
+    ]
 
     # Get the name and so on for the customer.
     try:
@@ -394,20 +445,22 @@ def get_20_most_popular():
 
 
 def main():
-    # test1 = get_products_filtered({'type': 'Shirts', 'subtype': 'T-shirt', 'gender': 'Female'})
+    test1 = get_products_filtered({'type': 'Shirts', 'subtype': 'T-shirt', 'gender': 'Female'})
+
     # test2 = get_products_filtered(None)
-    # test3 = get_products_search() FUNKAR EJ
     # test4 = get_20_most_popular()
 
-    write_order_sql({'email': 'edca17@student.bth.se', 'name': 'Martino Baldcock', 'address': 'Utridarevägen 5A',
-                     'zipcode': '37140', 'town': 'Karlskrona', 'items': '[777]'})
+    # write_order_sql({'email': 'jesu17@student.bth.se', 'name': 'Jesper Sundius', 'address': 'Byggmästaregatan 5A',
+    #                 'zipcode': '37140', 'town': 'Karlskrona',
+    #                'items': '[777,1331,777,47842,1230,16543,8798,6656,6656]'})
 
-    # test = get_subcategories('Male', 'Jackets')
-    # test = get_products_search(['jack', 'and', 'jones'])
-    # test = get_products_search(['wesc'])
+    # test3 = get_subcategories('Male', 'Jackets')
+    # test5 = get_products_search(['jack', 'and', 'jones'])
+    # test6 = get_products_search(['wesc'])
 
-    # test = get_categories()
-    # test = get_20_most_popular()
+    # test = get_products_ids([1, 2, 3, 4, 5, 6, 1, 2, 1])
+    # test7 = get_categories()
+    # test8 = get_20_most_popular()
 
 
 if __name__ == '__main__':
