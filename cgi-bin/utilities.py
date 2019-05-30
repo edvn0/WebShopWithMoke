@@ -259,6 +259,14 @@ def get_subcategories(gender, category):
 
 
 def insert_customer(first_name, last_name, email, address_id):
+    """
+    Inserts a customer into WebShop_Customers, calls itself recursively if customer does not exist
+    :param first_name: first name
+    :param last_name: last name
+    :param email: email
+    :param address_id: id from insert_address(params) function.
+    :return: the customer inserted or retrieved from the database.
+    """
     sql_check = 'select * from WebShop_Customer where first_name = %s and last_name = %s'
     cursor.execute(sql_check, (first_name, last_name))
     res = cursor.fetchall()
@@ -276,6 +284,14 @@ def insert_customer(first_name, last_name, email, address_id):
 
 
 def insert_address(address, zipcode, town):
+    """
+    Inserts or retrieves an address row from WebShop_Address, depending on if it exists or not.
+    Calls itself recursively if not found in db.
+    :param address: address (first line)
+    :param zipcode: zipcode (second line)
+    :param town: town (third line)
+    :return: the address retrieved or inserted
+    """
     sql_check = 'select * from WebShop_Address where first_line = %s and second_line = %s and third_line = %s'
     cursor.execute(sql_check, (address, zipcode, town))
     res = cursor.fetchall()
@@ -373,6 +389,8 @@ def get_20_most_popular():
 
     return res
 
+def write_order():
+    pass
 
 def main():
     test1 = get_products_filtered({'type': 'Shirts', 'subtype': 'T-shirt', 'gender': 'Female'})
