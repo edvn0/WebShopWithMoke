@@ -11,9 +11,10 @@ from os import path
 from jinja2 import Environment, FileSystemLoader
 
 # Import our utilitiy functions
+# FIXME: write_order_sql might not exist, check this!
 from utilities import (get_20_most_popular, get_categories,
                        get_products_filtered, get_products_ids,
-                       get_products_search, get_subcategories, write_order_sql)
+                       get_products_search, get_subcategories, write_order_sql, write_order)
 
 sys.stdout = getwriter("utf-8")(sys.stdout.detach())
 cgitb.enable()  # Enable debugging
@@ -89,6 +90,7 @@ def subcategories(limits, gender, category):
 def cart():
     from os import environ
     cart = []
+    values = []
     try:
         if 'HTTP_COOKIE' in environ:
             cart_data = {
@@ -98,18 +100,25 @@ def cart():
                     for cookie in environ['HTTP_COOKIE'].split('; ')
                 ]
             }.get('cart')
-            if cart_data.strip('[]').split('%2C') != [""]:
-                if cart_data:
-                    values = [int(x) for x in cart_data.strip('[]').split('%2C')]
-                    cart = get_products_ids(values)
+        if cart_data.strip('[]').split('%2C') != [""]:
+            if cart_data:
+                values = [int(x) for x in cart_data.strip('[]').split('%2C')]
+                cart = get_products_ids(values)
             else:
-                values = []
                 cart = get_products_ids(values)
         template = env.get_template('cart.html')
         total = 0
+        items = [
+            {
+                'id': int(x),
+                'amount': values.count(x)
+            } for x in list(set(values))
+        ]
         if cart is not None:
+            i = 0
             for product in cart:
-                total += product['price']
+                total += product['price'] * items[i]['amount']
+                i += 1
 
         print(template.render(
             title='BestBuy (cart)',
@@ -131,6 +140,8 @@ def checkout():
             'town': form.getvalue('town'),
             'items': form.getvalue('items')
         }
+
+        # TODO: change
         write_order_sql(order)
 
         template = env.get_template('checkout.html')
